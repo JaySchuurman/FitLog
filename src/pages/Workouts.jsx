@@ -11,13 +11,27 @@ export default function Workouts() {
     setWorkouts(stored);
   }, []);
 
+  function handleDeleteWorkout(index) {
+    const updated = workouts.filter((_, i) => i !== index);
+    setWorkouts(updated);
+    localStorage.setItem("workouts", JSON.stringify(updated));
+  }
+
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold mb-4">Mijn Workouts</h1>
 
       {workouts.length > 0 ? (
         workouts.map((w, index) => (
-          <WorkoutCard key={index} title={w.name} exercises={w.exercises} />
+          <div key={index} className="relative">
+            <WorkoutCard title={w.name} exercises={w.exercises} />
+            <button
+              onClick={() => handleDeleteWorkout(index)}
+              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-400"
+            >
+              Verwijder
+            </button>
+          </div>
         ))
       ) : (
         <p className="text-gray-300">Nog geen workouts beschikbaar.</p>
