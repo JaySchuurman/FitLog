@@ -25,7 +25,7 @@ export default function Workouts() {
 
       <button
         onClick={() => navigate("/new-workout")}
-        className="mt-6 w-full bg-blue-500 py-2 rounded-xl font-semibold hover:bg-blue-400"
+        className="mt-6 w-full bg-orange-500 py-2 rounded-xl font-semibold hover:bg-orange-400"
       >
         + Nieuwe workout maken
       </button>
