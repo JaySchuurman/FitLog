@@ -122,14 +122,14 @@ function Exercises({ selectedExercises: parentSelected = [], onChange }) {
   return (
     <div>
       {/* Bodypart buttons */}
-      <div className="flex gap-4 mb-6 flex-wrap">
+      <div className="flex gap-4 mb-6 flex-wrap mt-5 ml-5">
         {bodyParts.map((part) => (
           <button
             key={part}
             onClick={() => setSelectedBodyPart(part)}
             className={`px-4 py-2 rounded ${
               selectedBodyPart === part
-                ? "bg-blue-500 text-white"
+                ? "bg-orange-500 text-white"
                 : "bg-gray-700 text-gray-300"
             }`}
           >
@@ -139,7 +139,7 @@ function Exercises({ selectedExercises: parentSelected = [], onChange }) {
       </div>
 
       {/* Exercises grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-9 ml-5">
         {exercises.map((exercise) => {
           const isSelected = selectedExercises.find((e) => e.id === exercise.id);
           return (
