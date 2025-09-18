@@ -17,8 +17,8 @@ export default function Home() {
       <h1 className="text-2xl font-bold mb-4">Home</h1>
 
       {/* Workouts voor vandaag */}
-      <div className="bg-gray-200 p-4 rounded-xl shadow-md border border-orange-300">
-        <h2 className="text-xl font-semibold mb-2">
+      <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
+        <h2 className="text-xl font-bold mb-2 text-gray-400">
           Workouts voor vandaag ({new Date().toLocaleDateString("nl-NL")}):
         </h2>
         {todayWorkouts.length > 0 ? (
@@ -28,7 +28,7 @@ export default function Home() {
             ))}
           </ul>
         ) : (
-          <p className="text-gray-600">Nog geen workouts ingepland voor vandaag.</p>
+          <p className="font-bold mb-2 text-gray-400">Nog geen workouts ingepland voor vandaag.</p>
         )}
       </div>
 
