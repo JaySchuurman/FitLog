@@ -6,12 +6,15 @@ import Exercises from "./pages/Exercises";
 import Progress from "./pages/Progress";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import { ThemeProvider } from "./components/ThemeProvider";
+
 
 function App() {
   return (
+    <ThemeProvider>
     <Router>
-      <div className="min-h-screen bg-gray-900 text-white">
-        <nav className="flex justify-around bg-gray-800 p-4">
+      <div className="min-h-screen bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
+        <nav className="flex justify-around bg-gray-200 dark:bg-gray-800 p-4">
           <Link to="/">Home</Link>
           <Link to="/workouts">Workouts</Link>
           <Link to="/exercises">Exercises</Link>
@@ -31,6 +34,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </ThemeProvider>
   );
 }
 
