@@ -30,10 +30,17 @@ function PrivateRoute({ children }) {
 
 function App() {
   return (
+    <ThemeProvider>
     <Router>
       <div className="min-h-screen bg-gray-900 text-white">
-        {/* Navbar met dropdown + login status */}
-        <Navbar />
+        <nav className="flex justify-around bg-gray-800 p-4">
+          <Link to="/">Home</Link>
+          <Link to="/workouts">Workouts</Link>
+          <Link to="/exercises">Exercises</Link>
+          <Link to="/progress">Progress</Link>
+          <Link to="/settings">Settings</Link>
+          <Link to="/login">Login</Link>
+        </nav>
 
         <Routes>
           {/* Private routes */}
@@ -91,6 +98,7 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </ThemeProvider>
   );
 }
 
