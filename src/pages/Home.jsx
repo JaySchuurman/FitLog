@@ -34,7 +34,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
       {user && (
         <p className="text-lg mb-4">
           Welkom <span className="font-bold">{user.email}</span>!

@@ -13,7 +13,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <h1 className="text-2xl font-bold mb-4">Home</h1>
 
       {/* Workouts voor vandaag */}
