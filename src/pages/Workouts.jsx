@@ -12,6 +12,12 @@ export default function Home() {
     setTodayWorkouts(storedDaily[todayKey] || []);
   }, []);
 
+  function handleDeleteWorkout(index) {
+    const updated = workouts.filter((_, i) => i !== index);
+    setWorkouts(updated);
+    localStorage.setItem("workouts", JSON.stringify(updated));
+  }
+
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold mb-4">Home</h1>
