@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "/firebase"; // root firebase.js
+import { db, auth } from "/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import WorkoutCard from "../components/WorkoutCard";
 
 export default function Home() {
   const [workouts, setWorkouts] = useState([]);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // 🔥 Firebase Auth listener
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchWorkouts = async () => {
@@ -25,6 +35,12 @@ export default function Home() {
 
   return (
     <div className="p-6 space-y-6">
+      {user && (
+        <p className="text-lg mb-4">
+          Welkom <span className="font-bold">{user.email}</span>!
+        </p>
+      )}
+
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-bold mb-2">Vandaag’s Workout</h2>
         <p className="text-gray-400">Geen workout gepland vandaag.</p>
@@ -32,7 +48,6 @@ export default function Home() {
           Nieuwe workout toevoegen
         </button>
 
-        {/* 🔥 Firestore test output right below button */}
         <div className="mt-6 bg-gray-700 p-4 rounded-xl text-white">
           <h3 className="font-semibold mb-2">📂 Workouts of the day</h3>
           {workouts.length > 0 ? (
@@ -48,11 +63,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Example hardcoded WorkoutCard */}
-      <WorkoutCard
-        title="Push Day"
-        exercises={["Bench Press", "Shoulder Press"]}
-      />
+      <WorkoutCard title="Push Day" exercises={["Bench Press", "Shoulder Press"]} />
     </div>
   );
 }

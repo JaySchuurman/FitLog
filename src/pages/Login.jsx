@@ -1,18 +1,34 @@
 "use client";
-import { useState } from "react";
-import { auth } from "../firebase"; // jouw firebase config importeren
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  GoogleAuthProvider, 
-  signInWithPopup 
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 
 export default function Login() {
-  const [isRegister, setIsRegister] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Check waar de gebruiker vandaan komt (redirect na login)
+  const from = location.state?.from?.pathname || "/";
+
+  // Check query param ?mode=register om direct naar register te gaan
+  const params = new URLSearchParams(location.search);
+  const mode = params.get("mode");
+
+  const [isRegister, setIsRegister] = useState(mode === "register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // Update state bij query param verandering
+  useEffect(() => {
+    setIsRegister(mode === "register");
+  }, [mode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,6 +39,7 @@ export default function Login() {
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
+      navigate(from, { replace: true }); // terug naar de vorige pagina
     } catch (err) {
       setError(err.message);
     }
@@ -32,6 +49,7 @@ export default function Login() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
+      navigate(from, { replace: true }); // terug naar de vorige pagina
     } catch (err) {
       setError(err.message);
     }
@@ -43,15 +61,12 @@ export default function Login() {
         <h2 className="text-2xl font-bold mb-6 text-white text-center">
           {isRegister ? "Registreren" : "Inloggen"}
         </h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-300 mb-2" htmlFor="email">
-              Email
-            </label>
+            <label className="block text-gray-300 mb-2">Email</label>
             <input
               type="email"
-              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -59,12 +74,9 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-gray-300 mb-2" htmlFor="password">
-              Wachtwoord
-            </label>
+            <label className="block text-gray-300 mb-2">Wachtwoord</label>
             <input
               type="password"
-              id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
