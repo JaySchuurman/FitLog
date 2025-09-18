@@ -11,7 +11,7 @@ export default function WorkoutCard({ title, exercises }) {
           ))}
         </ul>
       ) : (
-        <p className="text-gray-400">Geen oefeningen toegevoegd</p>
+        <p className="text-gray-400">Geen oefeningen toegevoegd yes</p>
       )}
     </div>
   );
