@@ -17,27 +17,21 @@ export default function Home() {
   useEffect(() => {
     const fetchWorkouts = async () => {
       if (!user) return;
-
       try {
         const todayStr = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
-
         const q = query(
           collection(db, "workouts"),
           where("userId", "==", user.uid)
         );
-
         const snapshot = await getDocs(q);
         const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
         // Filter alleen workouts van vandaag
         const todays = data.filter((w) => w.date === todayStr);
-
         setTodayWorkouts(todays);
       } catch (err) {
         console.error("Error fetching workouts:", err);
       }
     };
-
     fetchWorkouts();
   }, [user]);
 
@@ -48,7 +42,6 @@ export default function Home() {
           Welkom <span className="font-bold">{user.email}</span>!
         </p>
       )}
-
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-bold mb-2 text-gray-400">Vandaag’s Workout</h2>
         {todayWorkouts.length > 0 ? (
@@ -59,7 +52,15 @@ export default function Home() {
                 {workout.exercises && workout.exercises.length > 0 ? (
                   <ul className="text-gray-300 list-disc list-inside">
                     {workout.exercises.map((ex, i) => (
-                      <li key={i}>{ex}</li>
+                      <li key={i}>
+                        {ex.sets == null && ex.reps == null && ex.weight == null && ex.time == null
+                          ? ex.name
+                          : `${ex.name} (${
+                              ex.sets === 1 ? "1 set" : `${ex.sets || 0} sets`
+                            }, ${
+                              ex.reps === 1 ? "1 rep" : `${ex.reps || 0} reps`
+                            }${ex.weight ? `, ${ex.weight} kg` : ""}${ex.time ? `, ${ex.time}` : ""})`}
+                      </li>
                     ))}
                   </ul>
                 ) : (

@@ -6,12 +6,16 @@ export default function WorkoutsPage() {
   const [user, setUser] = useState(null);
   const [workoutName, setWorkoutName] = useState("");
   const [exerciseInput, setExerciseInput] = useState("");
+  const [sets, setSets] = useState(1);
+  const [reps, setReps] = useState(1);
+  const [weight, setWeight] = useState("");
+  const [time, setTime] = useState("");
   const [exercises, setExercises] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [todayWorkouts, setTodayWorkouts] = useState([]);
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([]);
 
-  // 🔥 Auth listener
+  // Auth listener
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
@@ -21,64 +25,78 @@ export default function WorkoutsPage() {
 
   // Voeg oefening toe aan de lijst
   const addExercise = () => {
-    if (exerciseInput.trim() !== "") {
-      setExercises([...exercises, exerciseInput.trim()]);
-      setExerciseInput("");
+    if (exerciseInput.trim() === "" || sets <= 0 || reps <= 0) {
+      alert("Vul een geldige oefeningnaam, sets (minimaal 1) en reps (minimaal 1) in.");
+      return;
     }
+    setExercises([...exercises, {
+      name: exerciseInput.trim(),
+      email: user ? user.email : "",
+      sets: Number(sets),
+      reps: Number(reps),
+      weight: weight ? Number(weight) : null,
+      time: time ? time.trim() : null
+    }]);
+    setExerciseInput("");
+    setSets(1);
+    setReps(1);
+    setWeight("");
+    setTime("");
   };
 
   // Voeg workout toe aan Firebase
   const addWorkout = async () => {
-    if (!workoutName || exercises.length === 0 || !user) return;
-
+    if (!workoutName.trim() || exercises.length === 0 || !user) {
+      alert("Vul een workoutnaam in en voeg minimaal één oefening toe.");
+      return;
+    }
     try {
       await addDoc(collection(db, "workouts"), {
         userId: user.uid,
-        name: workoutName,
+        name: workoutName.trim(),
         exercises,
         exerciseCount: exercises.length,
-        date: selectedDate, // yyyy-mm-dd
+        date: selectedDate,
         createdAt: new Date(),
       });
-
       setWorkoutName("");
       setExercises([]);
-      fetchWorkouts(user.uid); // direct refresh
+      fetchWorkouts(user.uid); // Direct refresh
     } catch (err) {
       console.error("Error adding workout:", err);
+      alert("Fout bij het toevoegen van de workout.");
     }
   };
 
   // Haal workouts van gebruiker op
   const fetchWorkouts = async (userId) => {
     if (!userId) return;
-
-    const q = query(
-      collection(db, "workouts"),
-      where("userId", "==", userId),
-      orderBy("date", "asc")
-    );
-
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    // Workouts van vandaag
-    setTodayWorkouts(
-      data.filter((w) => {
-        const workoutDate = new Date(w.date); // altijd Date object
-        return workoutDate.toISOString().slice(0, 10) === todayStr;
-      })
-    );
-
-    // Komende workouts
-    setUpcomingWorkouts(
-      data.filter((w) => {
-        const workoutDate = new Date(w.date);
-        return workoutDate.toISOString().slice(0, 10) !== todayStr;
-      })
-    );
+    try {
+      const q = query(
+        collection(db, "workouts"),
+        where("userId", "==", userId),
+        orderBy("date", "asc")
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const todayStr = new Date().toISOString().slice(0, 10);
+      // Workouts van vandaag
+      setTodayWorkouts(
+        data.filter((w) => {
+          const workoutDate = new Date(w.date);
+          return workoutDate.toISOString().slice(0, 10) === todayStr;
+        })
+      );
+      // Komende workouts
+      setUpcomingWorkouts(
+        data.filter((w) => {
+          const workoutDate = new Date(w.date);
+          return workoutDate.toISOString().slice(0, 10) !== todayStr;
+        })
+      );
+    } catch (err) {
+      console.error("Error fetching workouts:", err);
+    }
   };
 
   // Fetch workouts zodra user beschikbaar is
@@ -91,50 +109,78 @@ export default function WorkoutsPage() {
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold mb-4">Workouts</h1>
-
       {/* Nieuwe workout toevoegen */}
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg space-y-3">
         <h2 className="text-xl font-bold text-gray-300">Nieuwe workout toevoegen</h2>
-
         <input
           type="text"
-          placeholder="Naam van workout"
+          placeholder="Naam van workout (bijv. Krachttraining)"
           value={workoutName}
           onChange={(e) => setWorkoutName(e.target.value)}
           className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
         />
-
-        <div className="flex space-x-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <input
             type="text"
-            placeholder="Voeg oefening toe"
+            placeholder="Oefening (bijv. Deadlift)"
             value={exerciseInput}
             onChange={(e) => setExerciseInput(e.target.value)}
-            className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600"
+            className="p-2 rounded bg-gray-700 text-white border border-gray-600"
+          />
+          <input
+            type="number"
+            placeholder="Aantal sets"
+            value={sets}
+            min="1"
+            onChange={(e) => setSets(e.target.value)}
+            className="p-2 rounded bg-gray-700 text-white border border-gray-600"
+          />
+          <input
+            type="number"
+            placeholder="Aantal reps"
+            value={reps}
+            min="1"
+            onChange={(e) => setReps(e.target.value)}
+            className="p-2 rounded bg-gray-700 text-white border border-gray-600"
+          />
+          <input
+            type="number"
+            placeholder="Gewicht (optioneel, in kg)"
+            value={weight}
+            step="0.5"
+            min="0"
+            onChange={(e) => setWeight(e.target.value)}
+            className="p-2 rounded bg-gray-700 text-white border border-gray-600"
+          />
+          <input
+            type="text"
+            placeholder="Tijd (optioneel, bijv. 30s)"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            className="p-2 rounded bg-gray-700 text-white border border-gray-600"
           />
           <button
             onClick={addExercise}
-            className="bg-orange-500 px-4 rounded hover:bg-orange-400"
+            className="bg-orange-500 px-4 py-2 rounded hover:bg-orange-400 md:col-span-2"
           >
-            Voeg toe
+            Voeg oefening toe
           </button>
         </div>
-
         {exercises.length > 0 && (
           <ul className="list-disc list-inside text-gray-200">
             {exercises.map((ex, i) => (
-              <li key={i}>{ex}</li>
+              <li key={i}>
+                {ex.name} ({ex.sets} sets, {ex.reps} reps{ex.weight ? `, ${ex.weight} kg` : ""}{ex.time ? `, ${ex.time}` : ""}) door: {ex.email}
+              </li>
             ))}
           </ul>
         )}
-
         <input
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
         />
-
         <button
           onClick={addWorkout}
           disabled={!user}
@@ -145,7 +191,6 @@ export default function WorkoutsPage() {
           Voeg Workout toe
         </button>
       </div>
-
       {/* Workouts voor vandaag */}
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-bold mb-2 text-gray-400">
@@ -155,7 +200,9 @@ export default function WorkoutsPage() {
           <ul className="list-disc list-inside">
             {todayWorkouts.map((w) => (
               <li key={w.id}>
-                {w.name} ({w.exerciseCount} oefeningen): {w.exercises.join(", ")}
+                {w.name} ({w.exerciseCount} oefeningen): {w.exercises.map(ex => 
+                  `${ex.name} (${ex.sets} sets, ${ex.reps} reps${ex.weight ? `, ${ex.weight} kg` : ""}${ex.time ? `, ${ex.time}` : ""})`
+                ).join(", ")}
               </li>
             ))}
           </ul>
@@ -163,7 +210,6 @@ export default function WorkoutsPage() {
           <p className="font-bold mb-2 text-gray-400">Nog geen workouts ingepland voor vandaag.</p>
         )}
       </div>
-
       {/* Komende workouts */}
       {upcomingWorkouts.length > 0 && (
         <div className="mt-6">
@@ -174,7 +220,9 @@ export default function WorkoutsPage() {
                 key={w.id}
                 className="bg-gray-700 p-3 rounded-lg shadow-sm border text-gray-200"
               >
-                <strong>{w.date}:</strong> {w.name} ({w.exerciseCount} oefeningen) – {w.exercises.join(", ")}
+                <strong>{w.date}:</strong> {w.name} ({w.exerciseCount} oefeningen) – {w.exercises.map(ex => 
+                  `${ex.name} (${ex.sets} sets, ${ex.reps} reps${ex.weight ? `, ${ex.weight} kg` : ""}${ex.time ? `, ${ex.time}` : ""})`
+                ).join(", ")}
               </li>
             ))}
           </ul>
