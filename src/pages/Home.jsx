@@ -31,15 +31,32 @@ export default function Home() {
         const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         const todayStr = new Date().toISOString().slice(0, 10);
 
-        const today = data.filter((w) => {
-          const d = typeof w.date === "string" ? w.date : w.date.toDate?.().toISOString().slice(0,10) || new Date(w.date).toISOString().slice(0,10);
-          return d === todayStr;
-        });
+        // Functie om datum te normaliseren
+        const getDateStr = (w) =>
+          typeof w.date === "string"
+            ? w.date
+            : w.date.toDate?.()?.toISOString().slice(0, 10) || new Date(w.date).toISOString().slice(0, 10);
 
-        const upcoming = data.filter((w) => {
-          const d = typeof w.date === "string" ? w.date : w.date.toDate?.().toISOString().slice(0,10) || new Date(w.date).toISOString().slice(0,10);
-          return d > todayStr;
-        });
+        // Filter duplicaten op dezelfde dag
+        const filterDuplicates = (workouts) => {
+          return workouts.filter((w, index, arr) => {
+            const duplicates = arr.filter(
+              (other) =>
+                getDateStr(other) === getDateStr(w) &&
+                JSON.stringify(other.exercises) === JSON.stringify(w.exercises)
+            );
+            // Laat alleen de eerste voorkomen
+            return duplicates[0].id === w.id;
+          });
+        };
+
+        const today = filterDuplicates(
+          data.filter((w) => getDateStr(w) === todayStr)
+        );
+
+        const upcoming = filterDuplicates(
+          data.filter((w) => getDateStr(w) > todayStr)
+        );
 
         setTodayWorkouts(today);
         setUpcomingWorkouts(upcoming);
@@ -49,6 +66,7 @@ export default function Home() {
     };
     fetchWorkouts();
   }, [user]);
+
   // Kopieer workout naar nieuwe datum
   const copyWorkout = async (workout, newDate) => {
     if (!user) return alert("Log in om workouts te kopiëren.");
@@ -60,6 +78,7 @@ export default function Home() {
         exerciseCount: workout.exercises.length,
         date: newDate,
         createdAt: new Date(),
+        copiedFromId: workout.id, // <- nieuwe property
       });
       setWorkoutToRepeat(null);
       alert(`Workout '${workout.name}' gekopieerd naar ${newDate}`);
@@ -122,6 +141,7 @@ export default function Home() {
           Bevestigen
         </button>
       </div>
+
       {/* Vandaag’s workouts */}
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
         <h2 className="text-xl font-bold mb-2 text-gray-400">Vandaag’s Workout</h2>
@@ -154,6 +174,7 @@ export default function Home() {
           <p className="text-gray-400">Geen workouts gepland voor vandaag.</p>
         )}
       </div>
+
       {/* Geplande toekomstige workouts */}
       {upcomingWorkouts.length > 0 && (
         <div className="bg-gray-800 p-6 rounded-2xl shadow-lg mt-6">
