@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
-import { collection, addDoc, query, where, getDocs, orderBy } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  orderBy,
+} from "firebase/firestore";
 
 export default function WorkoutsPage() {
   const [user, setUser] = useState(null);
@@ -11,9 +18,18 @@ export default function WorkoutsPage() {
   const [weight, setWeight] = useState("");
   const [time, setTime] = useState("");
   const [exercises, setExercises] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [todayWorkouts, setTodayWorkouts] = useState([]);
   const [upcomingWorkouts, setUpcomingWorkouts] = useState([]);
+
+  // 🔸 Modal state
+  const [showRepeatModal, setShowRepeatModal] = useState(false);
+  const [workoutToRepeat, setWorkoutToRepeat] = useState(null);
+  const [repeatDate, setRepeatDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
 
   // Auth listener
   useEffect(() => {
@@ -23,20 +39,25 @@ export default function WorkoutsPage() {
     return () => unsubscribe();
   }, []);
 
-  // Voeg oefening toe aan de lijst
+  // Voeg oefening toe
   const addExercise = () => {
     if (exerciseInput.trim() === "" || sets <= 0 || reps <= 0) {
-      alert("Vul een geldige oefeningnaam, sets (minimaal 1) en reps (minimaal 1) in.");
+      alert(
+        "Vul een geldige oefeningnaam, sets (minimaal 1) en reps (minimaal 1) in."
+      );
       return;
     }
-    setExercises([...exercises, {
-      name: exerciseInput.trim(),
-      email: user ? user.email : "",
-      sets: Number(sets),
-      reps: Number(reps),
-      weight: weight ? Number(weight) : null,
-      time: time ? time.trim() : null
-    }]);
+    setExercises([
+      ...exercises,
+      {
+        name: exerciseInput.trim(),
+        email: user ? user.email : "",
+        sets: Number(sets),
+        reps: Number(reps),
+        weight: weight ? Number(weight) : null,
+        time: time ? time.trim() : null,
+      },
+    ]);
     setExerciseInput("");
     setSets(1);
     setReps(1);
@@ -44,7 +65,7 @@ export default function WorkoutsPage() {
     setTime("");
   };
 
-  // Voeg workout toe aan Firebase
+  // Voeg workout toe
   const addWorkout = async () => {
     if (!workoutName.trim() || exercises.length === 0 || !user) {
       alert("Vul een workoutnaam in en voeg minimaal één oefening toe.");
@@ -61,14 +82,14 @@ export default function WorkoutsPage() {
       });
       setWorkoutName("");
       setExercises([]);
-      fetchWorkouts(user.uid); // Direct refresh
+      fetchWorkouts(user.uid);
     } catch (err) {
       console.error("Error adding workout:", err);
       alert("Fout bij het toevoegen van de workout.");
     }
   };
 
-  // Haal workouts van gebruiker op
+  // Haal workouts op
   const fetchWorkouts = async (userId) => {
     if (!userId) return;
     try {
@@ -80,14 +101,14 @@ export default function WorkoutsPage() {
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       const todayStr = new Date().toISOString().slice(0, 10);
-      // Workouts van vandaag
+
       setTodayWorkouts(
         data.filter((w) => {
           const workoutDate = new Date(w.date);
           return workoutDate.toISOString().slice(0, 10) === todayStr;
         })
       );
-      // Komende workouts
+
       setUpcomingWorkouts(
         data.filter((w) => {
           const workoutDate = new Date(w.date);
@@ -99,19 +120,49 @@ export default function WorkoutsPage() {
     }
   };
 
-  // Fetch workouts zodra user beschikbaar is
   useEffect(() => {
-    if (user) {
-      fetchWorkouts(user.uid);
-    }
+    if (user) fetchWorkouts(user.uid);
   }, [user]);
+
+  // 🔸 Workout kopiëren
+  const copyWorkout = async (workout, newDate) => {
+    if (!user) return alert("Log in om workouts te kopiëren.");
+    try {
+      await addDoc(collection(db, "workouts"), {
+        userId: user.uid,
+        name: `${workout.name} (herhaald)`,
+        exercises: workout.exercises,
+        exerciseCount: workout.exercises.length,
+        date: newDate,
+        createdAt: new Date(),
+      });
+      setShowRepeatModal(false);
+      setWorkoutToRepeat(null);
+      fetchWorkouts(user.uid);
+      alert(`Workout '${workout.name}' gekopieerd naar ${newDate}`);
+    } catch (err) {
+      console.error("Error copying workout:", err);
+      alert("Fout bij het kopiëren van de workout.");
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold mb-4">Workouts</h1>
+
+      {/* 🔁 Algemene herhaal-knop */}
+      <button
+        onClick={() => setShowRepeatModal(true)}
+        className="bg-orange-500 hover:bg-orange-400 text-white px-4 py-2 rounded mb-4"
+      >
+        🔁 Deze workout wil ik herhalen
+      </button>
+
       {/* Nieuwe workout toevoegen */}
       <div className="bg-gray-800 p-6 rounded-2xl shadow-lg space-y-3">
-        <h2 className="text-xl font-bold text-gray-300">Nieuwe workout toevoegen</h2>
+        <h2 className="text-xl font-bold text-gray-300">
+          Nieuwe workout toevoegen
+        </h2>
         <input
           type="text"
           placeholder="Naam van workout (bijv. Krachttraining)"
@@ -170,7 +221,9 @@ export default function WorkoutsPage() {
           <ul className="list-disc list-inside text-gray-200">
             {exercises.map((ex, i) => (
               <li key={i}>
-                {ex.name} ({ex.sets} sets, {ex.reps} reps{ex.weight ? `, ${ex.weight} kg` : ""}{ex.time ? `, ${ex.time}` : ""}) door: {ex.email}
+                {ex.name} ({ex.sets} sets, {ex.reps} reps
+                {ex.weight ? `, ${ex.weight} kg` : ""}
+                {ex.time ? `, ${ex.time}` : ""})
               </li>
             ))}
           </ul>
@@ -185,32 +238,16 @@ export default function WorkoutsPage() {
           onClick={addWorkout}
           disabled={!user}
           className={`w-full py-2 rounded mt-2 ${
-            user ? "bg-orange-500 hover:bg-orange-400" : "bg-gray-600 cursor-not-allowed"
+            user
+              ? "bg-orange-500 hover:bg-orange-400"
+              : "bg-gray-600 cursor-not-allowed"
           }`}
         >
           Voeg Workout toe
         </button>
-      </div>
-      {/* Workouts voor vandaag */}
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
-        <h2 className="text-xl font-bold mb-2 text-gray-400">
-          Workouts voor vandaag ({new Date().toLocaleDateString("nl-NL")}):
-        </h2>
-        {todayWorkouts.length > 0 ? (
-          <ul className="list-disc list-inside">
-            {todayWorkouts.map((w) => (
-              <li key={w.id}>
-                {w.name} ({w.exerciseCount} oefeningen): {w.exercises.map(ex => 
-                  `${ex.name} (${ex.sets} sets, ${ex.reps} reps${ex.weight ? `, ${ex.weight} kg` : ""}${ex.time ? `, ${ex.time}` : ""})`
-                ).join(", ")}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="font-bold mb-2 text-gray-400">Nog geen workouts ingepland voor vandaag.</p>
-        )}
-      </div>
-      {/* Komende workouts */}
+      </div>    
+
+      {/* Geplande workouts */}
       {upcomingWorkouts.length > 0 && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-2">Geplande workouts:</h2>
@@ -220,12 +257,90 @@ export default function WorkoutsPage() {
                 key={w.id}
                 className="bg-gray-700 p-3 rounded-lg shadow-sm border text-gray-200"
               >
-                <strong>{w.date}:</strong> {w.name} ({w.exerciseCount} oefeningen) – {w.exercises.map(ex => 
-                  `${ex.name} (${ex.sets} sets, ${ex.reps} reps${ex.weight ? `, ${ex.weight} kg` : ""}${ex.time ? `, ${ex.time}` : ""})`
-                ).join(", ")}
+                <strong>{w.date}:</strong> {w.name} ({w.exerciseCount} oefeningen)
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* 🔸 Herhaal-modal */}
+      {showRepeatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-2xl shadow-lg w-full max-w-md">
+            {!workoutToRepeat ? (
+              <>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Kies een workout om te herhalen
+                </h3>
+                <ul className="max-h-60 overflow-y-auto text-gray-300 mb-4">
+                  {[...todayWorkouts, ...upcomingWorkouts].length > 0 ? (
+                    [...todayWorkouts, ...upcomingWorkouts].map((w) => (
+                      <li
+                        key={w.id}
+                        onClick={() => {
+                          setWorkoutToRepeat(w);
+                          setRepeatDate(new Date().toISOString().slice(0, 10));
+                        }}
+                        className="p-2 mb-1 rounded bg-gray-700 hover:bg-gray-600 cursor-pointer"
+                      >
+                        {w.name} – {w.date} ({w.exerciseCount} oefeningen)
+                      </li>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-sm">
+                      Geen workouts beschikbaar om te herhalen.
+                    </p>
+                  )}
+                </ul>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowRepeatModal(false)}
+                    className="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500"
+                  >
+                    Sluiten
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Herhaal workout: {workoutToRepeat.name}
+                </h3>
+                <label className="block text-gray-300 mb-2">
+                  Kies een nieuwe datum:
+                </label>
+                <input
+                  type="date"
+                  value={repeatDate}
+                  onChange={(e) => setRepeatDate(e.target.value)}
+                  className="w-full p-2 mb-4 rounded bg-gray-700 text-white border border-gray-600"
+                />
+                <div className="flex justify-between">
+                  <button
+                    onClick={() => setWorkoutToRepeat(null)}
+                    className="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500"
+                  >
+                    ← Terug
+                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowRepeatModal(false)}
+                      className="px-3 py-1 rounded bg-gray-600 hover:bg-gray-500"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      onClick={() => copyWorkout(workoutToRepeat, repeatDate)}
+                      className="px-3 py-1 rounded bg-orange-500 hover:bg-orange-400"
+                    >
+                      Bevestigen
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
