@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { collection, getDocs, query, where, addDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -18,56 +18,50 @@ export default function Home() {
     return () => unsubscribe();
   }, []);
 
-  // Haal workouts op
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      if (!user) return;
-      try {
-        const q = query(
-          collection(db, "workouts"),
-          where("userId", "==", user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        const todayStr = new Date().toISOString().slice(0, 10);
+  // Functie om workouts op te halen
+  const fetchWorkouts = useCallback(async () => {
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, "workouts"),
+        where("userId", "==", user.uid)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const todayStr = new Date().toISOString().slice(0, 10);
 
-        // Functie om datum te normaliseren
-        const getDateStr = (w) =>
-          typeof w.date === "string"
-            ? w.date
-            : w.date.toDate?.()?.toISOString().slice(0, 10) || new Date(w.date).toISOString().slice(0, 10);
+      const getDateStr = (w) =>
+        typeof w.date === "string"
+          ? w.date
+          : w.date.toDate?.()?.toISOString().slice(0, 10) || new Date(w.date).toISOString().slice(0, 10);
 
-        // Filter duplicaten op dezelfde dag
-        const filterDuplicates = (workouts) => {
-          return workouts.filter((w, index, arr) => {
-            const duplicates = arr.filter(
-              (other) =>
-                getDateStr(other) === getDateStr(w) &&
-                JSON.stringify(other.exercises) === JSON.stringify(w.exercises)
-            );
-            // Laat alleen de eerste voorkomen
-            return duplicates[0].id === w.id;
-          });
-        };
+      const filterDuplicates = (workouts) => {
+        return workouts.filter((w, index, arr) => {
+          const duplicates = arr.filter(
+            (other) =>
+              getDateStr(other) === getDateStr(w) &&
+              JSON.stringify(other.exercises) === JSON.stringify(w.exercises)
+          );
+          return duplicates[0].id === w.id;
+        });
+      };
 
-        const today = filterDuplicates(
-          data.filter((w) => getDateStr(w) === todayStr)
-        );
+      const today = filterDuplicates(data.filter((w) => getDateStr(w) === todayStr));
+      const upcoming = filterDuplicates(data.filter((w) => getDateStr(w) > todayStr));
 
-        const upcoming = filterDuplicates(
-          data.filter((w) => getDateStr(w) > todayStr)
-        );
-
-        setTodayWorkouts(today);
-        setUpcomingWorkouts(upcoming);
-      } catch (err) {
-        console.error("Error fetching workouts:", err);
-      }
-    };
-    fetchWorkouts();
+      setTodayWorkouts(today);
+      setUpcomingWorkouts(upcoming);
+    } catch (err) {
+      console.error("Error fetching workouts:", err);
+    }
   }, [user]);
 
-  // Kopieer workout naar nieuwe datum
+  // Haal workouts op als user verandert
+  useEffect(() => {
+    fetchWorkouts();
+  }, [user, fetchWorkouts]);
+
+  // Kopieer workout naar nieuwe datum en refresh automatisch
   const copyWorkout = async (workout, newDate) => {
     if (!user) return alert("Log in om workouts te kopiëren.");
     try {
@@ -78,10 +72,12 @@ export default function Home() {
         exerciseCount: workout.exercises.length,
         date: newDate,
         createdAt: new Date(),
-        copiedFromId: workout.id, // <- nieuwe property
+        copiedFromId: workout.id,
       });
       setWorkoutToRepeat(null);
       alert(`Workout '${workout.name}' gekopieerd naar ${newDate}`);
+      // 🔁 automatisch refresh
+      fetchWorkouts();
     } catch (err) {
       console.error("Error copying workout:", err);
       alert("Fout bij het kopiëren van de workout.");
