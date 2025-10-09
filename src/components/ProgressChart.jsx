@@ -1,37 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, addDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
+
 export default function ProgressPRBlock() {
-  const STORAGE_KEY = "fitlog_pr_records_v1";
   const [records, setRecords] = useState([]);
   const [lift, setLift] = useState("Deadlift");
   const [weight, setWeight] = useState(120);
   const [unit, setUnit] = useState("kgs");
   const [note, setNote] = useState("");
   const [user, setUser] = useState(null);
+  const [userKey, setUserKey] = useState(null);
   const [workoutStats, setWorkoutStats] = useState({ "1d": 0, "7d": 0, "30d": 0 });
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setRecords(JSON.parse(raw));
-    } catch (e) {
-      console.warn("Couldn't load saved PRs", e);
-    }
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (e) {
-      console.warn("Couldn't save PRs", e);
-    }
-  }, [records]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // Generate a random UUID for userKey if not already set
+        setUserKey(crypto.randomUUID());
+      }
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      if (!user || !userKey) return;
+      try {
+        const q = query(
+          collection(db, "progress"),
+          where("userKey", "==", userKey)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setRecords(data);
+      } catch (err) {
+        console.error("Error fetching PRs:", err);
+      }
+    };
+    fetchRecords();
+  }, [user, userKey]);
+
   useEffect(() => {
     const fetchWorkouts = async () => {
       if (!user) return;
@@ -53,7 +63,7 @@ export default function ProgressPRBlock() {
           const startDate = new Date(now.getTime() - periods[period]).toISOString().slice(0, 10);
           const filteredWorkouts = data.filter((w) => {
             const workoutDate = new Date(w.date);
-            return workoutDate >= new Date(startDate) && w.exercises.some(ex => ex.email === user.email);
+            return workoutDate >= new Date(startDate);
           });
           const workoutCount = filteredWorkouts.length;
           stats[period] = period === "1d" ? workoutCount : (workoutCount / (periods[period] / (24 * 60 * 60 * 1000))).toFixed(1);
@@ -65,35 +75,51 @@ export default function ProgressPRBlock() {
     };
     fetchWorkouts();
   }, [user]);
-  function addRecord(e) {
+
+  async function addRecord(e) {
     e.preventDefault();
-    if (!weight || Number(weight) <= 0) return;
-    const newRec = {
-      id: Date.now(),
-      lift,
-      weight: Number(weight),
-      unit,
-      note: note.trim(),
-      date: new Date().toISOString(),
-    };
-    setRecords((r) => [newRec, ...r]);
-    setWeight(unit === "kgs" ? 120 : 265);
-    setNote("");
+    if (!weight || Number(weight) <= 0 || !user || !userKey) return;
+    try {
+      const newRec = {
+        lift,
+        weight: Number(weight),
+        unit,
+        note: note.trim(),
+        date: new Date().toISOString(),
+        userKey,
+      };
+      await addDoc(collection(db, "progress"), newRec);
+      setRecords((r) => [{ id: Date.now(), ...newRec }, ...r]); // Optimistic update
+      setWeight(unit === "kgs" ? 120 : 265);
+      setNote("");
+    } catch (err) {
+      console.error("Error adding PR:", err);
+    }
   }
-  function removeRecord(id) {
-    setRecords((r) => r.filter((x) => x.id !== id));
+
+  async function removeRecord(id) {
+    try {
+      await deleteDoc(doc(db, "progress", id));
+      setRecords((r) => r.filter((x) => x.id !== id));
+    } catch (err) {
+      console.error("Error deleting PR:", err);
+    }
   }
+
   function lbsToKgs(lbs) {
     return lbs * 0.45359237;
   }
+
   function kgsToLbs(kgs) {
     return kgs / 0.45359237;
   }
+
   const totalInKgs = records.reduce((acc, r) => acc + (r.unit === "kgs" ? r.weight : lbsToKgs(r.weight)), 0);
   const totalDisplay = unit === "kgs" ? totalInKgs : kgsToLbs(totalInKgs);
   const formatNumber = (n) => Number(n).toLocaleString(undefined, { maximumFractionDigits: 1 });
   const maxWorkouts = Math.max(...Object.values(workoutStats), 1);
   const yAxisTicks = [Math.ceil(maxWorkouts), Math.ceil(maxWorkouts / 2), 0];
+
   return (
     <div className="bg-gray-800 p-6 rounded-2xl shadow-lg text-gray-100 max-w-4xl">
       <div className="flex justify-between items-start mb-4">
