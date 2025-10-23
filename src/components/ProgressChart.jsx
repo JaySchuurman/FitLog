@@ -17,7 +17,6 @@ export default function ProgressPRBlock() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Generate a random UUID for userKey if not already set
         setUserKey(crypto.randomUUID());
       }
     });
@@ -89,7 +88,7 @@ export default function ProgressPRBlock() {
         userKey,
       };
       await addDoc(collection(db, "progress"), newRec);
-      setRecords((r) => [{ id: Date.now(), ...newRec }, ...r]); // Optimistic update
+      setRecords((r) => [{ id: Date.now(), ...newRec }, ...r]);
       setWeight(unit === "kgs" ? 120 : 265);
       setNote("");
     } catch (err) {
@@ -118,7 +117,7 @@ export default function ProgressPRBlock() {
   const totalDisplay = unit === "kgs" ? totalInKgs : kgsToLbs(totalInKgs);
   const formatNumber = (n) => Number(n).toLocaleString(undefined, { maximumFractionDigits: 1 });
   const maxWorkouts = Math.max(...Object.values(workoutStats), 1);
-  const yAxisTicks = [Math.ceil(maxWorkouts), Math.ceil(maxWorkouts / 2), 0];
+  const yAxisTicks = [0, Math.ceil(maxWorkouts / 2), Math.ceil(maxWorkouts)];
 
   return (
     <div className="bg-gray-800 p-6 rounded-2xl shadow-lg text-gray-100 max-w-4xl">
@@ -190,13 +189,12 @@ export default function ProgressPRBlock() {
                 <div key={period} className="flex flex-col items-center relative group">
                   <div
                     className="bg-orange-500 w-full transition-opacity"
-                    style={{ height: `${(workoutStats[period] / maxWorkouts) * 100}px`, minHeight: "10px" }}
+                    style={{ height: `${(workoutStats[period] / maxWorkouts) * 160}px`, minHeight: "10px" }}
                   >
                     <span className="absolute top-[-1.5rem] left-1/2 transform -translate-x-1/2 text-xs bg-gray-700 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                      {workoutStats[period]}
+                      {period === "1d" ? `1 Dag: ${workoutStats[period]}` : period === "7d" ? `7 Dagen: ${workoutStats[period]}` : `30 Dagen: ${workoutStats[period]}`}
                     </span>
                   </div>
-                  <span className="mt-2 text-sm">{period === "1d" ? "1 Dag" : period === "7d" ? "7 Dagen" : "30 Dagen"}</span>
                 </div>
               ))}
             </div>
