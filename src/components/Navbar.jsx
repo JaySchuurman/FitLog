@@ -2,11 +2,13 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+
 export default function Navbar() {
   const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef();
+
   // Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -14,6 +16,7 @@ export default function Navbar() {
     });
     return () => unsubscribe();
   }, []);
+
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -24,20 +27,22 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   const handleLogout = async () => {
     await signOut(auth);
     setDropdownOpen(false);
     navigate("/login");
   };
+
   return (
-    <nav className="flex flex-col sm:flex-row justify-between items-center bg-gray-800 p-3 sm:p-4 border-b border-gray-700 relative overflow-visible">
+    <nav className="flex flex-col sm:flex-row justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 border-b border-gray-300 dark:border-gray-700 relative overflow-visible">
       {/* Links */}
       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 mb-2 sm:mb-0">
         <NavLink
           to="/"
           end
           className={({ isActive }) =>
-            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-300 text-sm sm:text-base"
+            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-900 dark:text-gray-300 text-sm sm:text-base"
           }
         >
           Home
@@ -45,7 +50,7 @@ export default function Navbar() {
         <NavLink
           to="/workouts"
           className={({ isActive }) =>
-            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-300 text-sm sm:text-base"
+            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-900 dark:text-gray-300 text-sm sm:text-base"
           }
         >
           Workouts
@@ -53,7 +58,7 @@ export default function Navbar() {
         <NavLink
           to="/progress"
           className={({ isActive }) =>
-            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-300 text-sm sm:text-base"
+            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-900 dark:text-gray-300 text-sm sm:text-base"
           }
         >
           Progress
@@ -61,7 +66,7 @@ export default function Navbar() {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-300 text-sm sm:text-base"
+            isActive ? "text-orange-500 font-bold text-sm sm:text-base" : "text-gray-900 dark:text-gray-300 text-sm sm:text-base"
           }
         >
           Settings
@@ -91,9 +96,9 @@ export default function Navbar() {
         </button>
         {/* Dropdown menu */}
         {dropdownOpen && (
-          <div className="absolute right-0 mt-2 w-40 bg-gray-700 rounded shadow-lg z-50 border border-gray-600">
+          <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-700 rounded shadow-lg z-50 border border-gray-300 dark:border-gray-600">
             {user && (
-              <div className="px-4 py-2 text-gray-200 text-sm border-b border-gray-600">
+              <div className="px-4 py-2 text-gray-900 dark:text-gray-200 text-sm border-b border-gray-300 dark:border-gray-600">
                 {user.email}
               </div>
             )}
@@ -101,14 +106,14 @@ export default function Navbar() {
               <>
                 <NavLink
                   to="/login"
-                  className="block px-4 py-2 text-gray-200 text-sm hover:bg-gray-600"
+                  className="block px-4 py-2 text-gray-900 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
                   onClick={() => setDropdownOpen(false)}
                 >
                   Inloggen
                 </NavLink>
                 <NavLink
                   to="/login?mode=register"
-                  className="block px-4 py-2 text-gray-200 text-sm hover:bg-gray-600"
+                  className="block px-4 py-2 text-gray-900 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
                   onClick={() => setDropdownOpen(false)}
                 >
                   Registreren
@@ -118,7 +123,7 @@ export default function Navbar() {
             {user && (
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-gray-200 text-sm hover:bg-gray-600"
+                className="w-full text-left px-4 py-2 text-gray-900 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 Logout
               </button>
